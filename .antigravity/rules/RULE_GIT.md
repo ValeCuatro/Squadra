@@ -22,4 +22,10 @@
 - [ ] Los casos de prueba fueron realizados por el desarrollador sin errores
 ```
 
-5. **Finalización y Testeo:** No se cierra un issue hasta que se hayan verificado **todos los casos de prueba manuales o automáticos**.
+5. **Uso estricto de Labels (Etiquetas):** Todo issue DEBE estar clasificado utilizando nuestras etiquetas estandarizadas para mantener ordenado el tablero. Al crear o modificar un issue, asigna al menos una etiqueta de cada una de estas categorías:
+   - **Módulo**: `module: core`, `module: tasks`, `module: inventory`, `module: equipment`, `module: staff`.
+   - **Tipo**: `type: feature`, `type: bug`, `type: infrastructure`.
+   - **Capa**: `layer: frontend`, `layer: backend`, `layer: fullstack`.
+   - **Tamaño (opcional pero recomendado)**: `size: epic` (para tareas grandes), `size: task` (para específicas pequeñas).
+
+6. **Finalización y Testeo:** No se cierra un issue hasta que se hayan verificado **todos los casos de prueba manuales o automáticos**.
