@@ -1,13 +1,13 @@
-# 🏊 Club Malvín — App de Gestión de Mantenimiento
+# 🏊 Squadra — App de Gestión de Mantenimiento
 
 ## Objetivo
-PWA mobile-first para gestionar el mantenimiento integral de las instalaciones del Club Malvín (Montevideo, Uruguay). Diseño ultra-minimalista premium.
+PWA mobile-first para gestionar el mantenimiento integral de instalaciones. Diseño ultra-minimalista premium.
 
 ## Tech Stack
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS + Shadcn UI
 - **Animaciones:** Framer Motion
 - **Charts:** Recharts
-- **Backend (futuro):** Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **Backend (planificado):** PostgreSQL (Supabase/Drizzle)
 
 ## Módulos
 
@@ -17,7 +17,7 @@ PWA mobile-first para gestionar el mantenimiento integral de las instalaciones d
 | Tickets | ✅ MVP | CRUD, filtros por estado, prioridad, asignación |
 | Áreas | ✅ MVP | Áreas y sub-áreas jerárquicas con CRUD |
 | Inventario | ✅ MVP | Stock con alertas, filtros por categoría |
-| Piscinas | ✅ MVP | Mediciones pH/Cl/Temp, historial, gráficos |
+| Mediciones | 🏗️ Refactor | Módulos dinámicos (Piscinas, Calderas, etc.) |
 | Auth | 🔲 Pendiente | Login, roles (Admin, Supervisor, Operario) |
 | Calendario | 🔲 Pendiente | Vista diaria de rutinas |
 | Escáner QR | 🔲 Pendiente | Lectura de QR en instalaciones |
