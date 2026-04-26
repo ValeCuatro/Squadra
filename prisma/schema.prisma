@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- STAFF & PROFILE ---
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      Role     @default(FIELD_WORKER)
+  phone     String?
+  avatar    String?
+  status    Status   @default(OFF_DUTY)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  managedAreas         Area[]
+  assignedTickets      Ticket[]
+  equipmentAssigned    Equipment[]
+  inventoryTransactions InventoryTransaction[]
+  equipmentLogs        EquipmentLog[]
+  measurementsDone     MeasurementRecord[]
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  FIELD_WORKER
+}
+
+enum Status {
+  ON_DUTY
+  OFF_DUTY
+}
+
+// --- AREAS & SUB-AREAS ---
+model Area {
+  id            String   @id @default(uuid())
+  name          String
+  image         String?
+  responsibleId String?
+  responsible   User?    @relation(fields: [responsibleId], references: [id])
+  createdAt     DateTime @default(now())
+
+  subAreas      SubArea[]
+  tickets       Ticket[]
+}
+
+model SubArea {
+  id        String   @id @default(uuid())
+  name      String
+  areaId    String
+  area      Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  tickets   Ticket[]
+}
+
+// --- TASKS (TICKETS) ---
+model Ticket {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  status      TicketStatus @default(PENDING)
+  priority    Priority @default(MEDIUM)
+  areaId      String
+  subAreaId   String?
+  assigneeId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  area        Area     @relation(fields: [areaId], references: [id])
+  subArea     SubArea? @relation(fields: [subAreaId], references: [id])
+  assignee    User?    @relation(fields: [assigneeId], references: [id])
+}
+
+enum TicketStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// --- INVENTORY ---
+model InventoryItem {
+  id           String   @id @default(uuid())
+  name         String
+  category     String
+  currentStock Float    @default(0)
+  minStock     Float    @default(0)
+  unit         String
+  lastUpdated  DateTime @default(now()) @updatedAt
+
+  transactions InventoryTransaction[]
+}
+
+model InventoryTransaction {
+  id        String   @id @default(uuid())
+  itemId    String
+  userId    String
+  type      TransactionType
+  quantity  Float
+  date      DateTime @default(now())
+
+  item      InventoryItem @relation(fields: [itemId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+}
+
+enum TransactionType {
+  IN
+  OUT
+}
+
+// --- EQUIPMENT ---
+model Equipment {
+  id          String   @id @default(uuid())
+  name        String
+  status      EquipmentStatus @default(AVAILABLE)
+  assigneeId  String?
+  createdAt   DateTime @default(now())
+
+  assignee    User?    @relation(fields: [assigneeId], references: [id])
+  logs        EquipmentLog[]
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  IN_USE
+  RESERVED
+  MAINTENANCE
+}
+
+model EquipmentLog {
+  id          String   @id @default(uuid())
+  equipmentId String
+  userId      String
+  action      EquipmentAction
+  date        DateTime @default(now())
+
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+enum EquipmentAction {
+  CHECK_OUT
+  RETURN
+}
+
+// --- MEASUREMENTS (DYNAMIC MODULES - ISSUE #9) ---
+model MeasurementModule {
+  id          String   @id @default(uuid())
+  name        String   // Ej: "Piscinas", "Cámaras Frigoríficas"
+  description String?
+  createdAt   DateTime @default(now())
+
+  parameters  MeasurementParameter[]
+  records     MeasurementRecord[]
+}
+
+model MeasurementParameter {
+  id          String   @id @default(uuid())
+  moduleId    String
+  name        String   // Ej: "Temperatura", "Nivel de Cloro"
+  type        ParamType @default(NUMBER)
+  minHealthy  Float?   // Límite inferior sano
+  maxHealthy  Float?   // Límite superior sano
+  unit        String?  // Ej: "°C", "ppm"
+
+  module      MeasurementModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  values      MeasurementValue[]
+}
+
+enum ParamType {
+  NUMBER
+  BOOLEAN
+  TEXT
+}
+
+model MeasurementRecord {
+  id          String   @id @default(uuid())
+  moduleId    String
+  userId      String
+  date        DateTime @default(now())
+
+  module      MeasurementModule @relation(fields: [moduleId], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
+  values      MeasurementValue[]
+}
+
+model MeasurementValue {
+  id           String   @id @default(uuid())
+  recordId     String
+  parameterId  String
+  value        String   // Guardamos como string y parseamos según el ParamType
+  isHealthy    Boolean  // Calculado al momento de insertar basado en minHealthy/maxHealthy
+
+  record       MeasurementRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  parameter    MeasurementParameter @relation(fields: [parameterId], references: [id])
+}

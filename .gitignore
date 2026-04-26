@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .antigravity/
+
+/src/generated/prisma

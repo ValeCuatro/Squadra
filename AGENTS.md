@@ -37,4 +37,6 @@ All issues should be categorized using these labels:
 
 ## Architectural Notes
 - The "Piscinas" module is being refactored into a generalized "Measurements" system where Admins can define custom points of interest and parameters.
-- Data currently resides in `src/data/mock.ts`. Future migration to Supabase is planned.
+- **Database Setup:** We use PostgreSQL with Prisma ORM.
+- **Local Development:** Run `npm run start-dev`. This script uses `pg` to check if `squadra_db` exists, creates it if necessary, pushes the schema, seeds initial data, and starts Vite.
+- **Credentials:** Local dev uses `postgres:postgres` by default. Update `.env` if different.
