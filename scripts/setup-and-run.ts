@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import { URL } from 'url';
@@ -55,7 +55,12 @@ async function run() {
     console.log('🌱 Ejecutando Seeding Automático (Datos maestros)...');
     execSync('npx prisma db seed', { stdio: 'inherit' });
 
-    console.log('🚀 Entorno de base de datos listo. Iniciando frontend (Vite)...');
+    console.log('🚀 Entorno de base de datos listo. Iniciando frontend (Vite) y backend...');
+    
+    // Iniciar backend (no bloqueante)
+    const apiProcess = spawn('npx', ['tsx', 'server/api.ts'], { stdio: 'inherit', shell: true });
+    
+    // Iniciar frontend (bloqueante)
     execSync('npm run dev', { stdio: 'inherit' });
 
   } catch (error) {

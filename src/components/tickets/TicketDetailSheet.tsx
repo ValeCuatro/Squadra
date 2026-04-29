@@ -45,7 +45,7 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-normal">{ticket.title}</p>
                   <p className="mt-0.5 text-[10px] text-primary-foreground/72">
-                    {ticket.area} · {ticket.subArea}
+                    {ticket.area?.name || ticket.area} {ticket.subArea ? `· ${ticket.subArea.name || ticket.subArea}` : ''}
                   </p>
                 </div>
                 <Badge className={`px-2 py-0.5 text-[10px] font-normal ${priorityColors[ticket.priority]}`}>
@@ -58,7 +58,7 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
               <div className="grid grid-cols-2 gap-2 text-[10px] text-primary-foreground/72">
                 <div className="rounded-2xl bg-primary-foreground/10 p-3">
                   <p className="mb-1 text-[9px] uppercase tracking-[0.14em] text-primary-foreground/56">Asignado a</p>
-                  <p className="text-xs text-primary-foreground">{ticket.assignee.name}</p>
+                  <p className="text-xs text-primary-foreground">{ticket.assignee ? ticket.assignee.name : 'Sin asignar'}</p>
                 </div>
                 <div className="rounded-2xl bg-primary-foreground/10 p-3">
                   <p className="mb-1 text-[9px] uppercase tracking-[0.14em] text-primary-foreground/56">Actualizado</p>

@@ -1,6 +1,7 @@
-import { Ticket, AlertTriangle, CheckCircle2, Clock, Activity, CloudSun, ArrowRight } from 'lucide-react';
+import { Ticket as TicketIcon, AlertTriangle, CheckCircle2, Clock, Activity, CloudSun, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { tickets, recentActivity, currentUser, inventory } from '@/data/mock';
+import { recentActivity, currentUser, inventory } from '@/data/mock';
+import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 
 const priorityColors: Record<string, string> = {
@@ -18,10 +19,16 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const pending = tickets.filter(t => t.status === 'pendiente').length;
-  const inProgress = tickets.filter(t => t.status === 'en_proceso').length;
-  const resolved = tickets.filter(t => t.status === 'resuelto').length;
-  const lowStock = inventory.filter(i => i.currentStock <= i.minStock).length;
+
+  const { data: tickets = [] } = useQuery<any[]>({
+    queryKey: ['tickets'],
+    queryFn: () => fetch('/api/tickets').then(r => r.json())
+  });
+
+  const pending = tickets.filter((t: any) => t.status === 'pendiente').length;
+  const inProgress = tickets.filter((t: any) => t.status === 'en_proceso').length;
+  const resolved = tickets.filter((t: any) => t.status === 'resuelto').length;
+  const lowStock = inventory.filter((i: any) => i.currentStock <= i.minStock).length;
 
   const urgentTasks = tickets.filter(
     t => t.status !== 'resuelto' && (t.priority === 'urgente' || t.priority === 'alta')
@@ -120,7 +127,7 @@ const Dashboard = () => {
                 {statusIcons[task.status]}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-normal truncate">{task.title}</p>
-                  <p className="text-[10px] text-muted-foreground">{task.subArea}</p>
+                  <p className="text-[10px] text-muted-foreground">{task.subArea?.name || task.subArea || 'Sin sub-área'}</p>
                 </div>
                 <Badge className={`text-[10px] px-2 py-0.5 font-normal ${priorityColors[task.priority]}`}>
                   {task.priority}

@@ -21,7 +21,7 @@ const TicketCard = ({ ticket, onOpen }: TicketCardProps) => {
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-normal">{ticket.title}</p>
           <p className="mt-0.5 text-[10px] text-primary-foreground/72">
-            {ticket.area} → {ticket.subArea}
+            {ticket.area?.name || ticket.area} {ticket.subArea ? `→ ${ticket.subArea.name || ticket.subArea}` : ''}
           </p>
         </div>
         <Badge className={`shrink-0 px-2 py-0.5 text-[10px] font-normal ${priorityColors[ticket.priority]}`}>
@@ -40,14 +40,20 @@ const TicketCard = ({ ticket, onOpen }: TicketCardProps) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/14">
-            <span className="text-[8px] font-medium text-primary-foreground">
-              {ticket.assignee.name.split(' ').map((name) => name[0]).join('')}
-            </span>
-          </div>
-          <span className="text-[10px] text-primary-foreground/72">
-            {ticket.assignee.name.split(' ')[0]}
-          </span>
+          {ticket.assignee ? (
+            <>
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/14">
+                <span className="text-[8px] font-medium text-primary-foreground">
+                  {ticket.assignee.name.split(' ').map((name: string) => name[0]).join('').substring(0, 2)}
+                </span>
+              </div>
+              <span className="text-[10px] text-primary-foreground/72">
+                {ticket.assignee.name.split(' ')[0]}
+              </span>
+            </>
+          ) : (
+            <span className="text-[10px] italic text-primary-foreground/72">Sin asignar</span>
+          )}
           <ChevronRight size={14} className="text-primary-foreground/56" />
         </div>
       </div>
