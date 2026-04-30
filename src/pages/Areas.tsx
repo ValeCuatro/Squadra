@@ -6,12 +6,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+import { useAuth } from '@/contexts/AuthContext';
 const Areas = () => {
   const queryClient = useQueryClient();
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [newSubAreaOpen, setNewSubAreaOpen] = useState(false);
   const [newAreaOpen, setNewAreaOpen] = useState(false);
+  const { user } = useAuth();
 
   // Form State
   const [newAreaName, setNewAreaName] = useState('');
@@ -105,36 +106,38 @@ const Areas = () => {
 
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-medium text-muted-foreground tracking-wide uppercase">Sub-áreas</h2>
-          <Sheet open={newSubAreaOpen} onOpenChange={setNewSubAreaOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-xs font-normal gap-1 h-7">
-                <Plus size={12} /> Agregar
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl">
-              <SheetHeader>
-                <SheetTitle className="text-sm font-medium">Nueva sub-área</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 mt-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-normal">Nombre</Label>
-                  <Input 
-                    value={newSubAreaName} 
-                    onChange={e => setNewSubAreaName(e.target.value)}
-                    placeholder="Nombre de la sub-área" 
-                    className="text-sm rounded-xl" 
-                  />
-                </div>
-                <Button 
-                  className="w-full rounded-xl text-sm font-normal" 
-                  onClick={handleCreateSubArea}
-                  disabled={createSubAreaMutation.isPending}
-                >
-                  {createSubAreaMutation.isPending ? 'Creando...' : 'Crear sub-área'}
+          {user?.role === 'ADMIN' && (
+            <Sheet open={newSubAreaOpen} onOpenChange={setNewSubAreaOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-xs font-normal gap-1 h-7">
+                  <Plus size={12} /> Agregar
                 </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl">
+                <SheetHeader>
+                  <SheetTitle className="text-sm font-medium">Nueva sub-área</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-normal">Nombre</Label>
+                    <Input 
+                      value={newSubAreaName} 
+                      onChange={e => setNewSubAreaName(e.target.value)}
+                      placeholder="Nombre de la sub-área" 
+                      className="text-sm rounded-xl" 
+                    />
+                  </div>
+                  <Button 
+                    className="w-full rounded-xl text-sm font-normal" 
+                    onClick={handleCreateSubArea}
+                    disabled={createSubAreaMutation.isPending}
+                  >
+                    {createSubAreaMutation.isPending ? 'Creando...' : 'Crear sub-área'}
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -156,54 +159,56 @@ const Areas = () => {
     <div className="px-4 py-5 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-normal">Áreas</h1>
-        <Sheet open={newAreaOpen} onOpenChange={setNewAreaOpen}>
-          <SheetTrigger asChild>
-            <Button size="sm" className="rounded-xl text-xs font-normal gap-1.5 h-8">
-              <Plus size={14} /> Nueva
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle className="text-sm font-medium">Nueva área</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-4 mt-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-normal">Nombre del área</Label>
-                <Input 
-                  value={newAreaName}
-                  onChange={e => setNewAreaName(e.target.value)}
-                  placeholder="Ej. Salón de eventos" 
-                  className="text-sm rounded-xl" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-normal">URL de imagen (Opcional)</Label>
-                <Input 
-                  value={newAreaImage}
-                  onChange={e => setNewAreaImage(e.target.value)}
-                  placeholder="https://..." 
-                  className="text-sm rounded-xl" 
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-normal">Responsable</Label>
-                <Select value={newAreaResponsible} onValueChange={setNewAreaResponsible}>
-                  <SelectTrigger className="rounded-xl text-sm"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {userList.map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button 
-                className="w-full rounded-xl text-sm font-normal" 
-                onClick={handleCreateArea}
-                disabled={createAreaMutation.isPending}
-              >
-                {createAreaMutation.isPending ? 'Creando...' : 'Crear área'}
+        {user?.role === 'ADMIN' && (
+          <Sheet open={newAreaOpen} onOpenChange={setNewAreaOpen}>
+            <SheetTrigger asChild>
+              <Button size="sm" className="rounded-xl text-xs font-normal gap-1.5 h-8">
+                <Plus size={14} /> Nueva
               </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle className="text-sm font-medium">Nueva área</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">Nombre del área</Label>
+                  <Input 
+                    value={newAreaName}
+                    onChange={e => setNewAreaName(e.target.value)}
+                    placeholder="Ej. Salón de eventos" 
+                    className="text-sm rounded-xl" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">URL de imagen (Opcional)</Label>
+                  <Input 
+                    value={newAreaImage}
+                    onChange={e => setNewAreaImage(e.target.value)}
+                    placeholder="https://..." 
+                    className="text-sm rounded-xl" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">Responsable</Label>
+                  <Select value={newAreaResponsible} onValueChange={setNewAreaResponsible}>
+                    <SelectTrigger className="rounded-xl text-sm"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                    <SelectContent>
+                      {userList.map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  className="w-full rounded-xl text-sm font-normal" 
+                  onClick={handleCreateArea}
+                  disabled={createAreaMutation.isPending}
+                >
+                  {createAreaMutation.isPending ? 'Creando...' : 'Crear área'}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
 
       <div className="space-y-3">

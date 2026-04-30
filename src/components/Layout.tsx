@@ -1,9 +1,10 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Ticket, MapPin, Package, Droplets } from 'lucide-react';
-import { currentUser } from '@/data/mock';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProfileSheet from './ProfileSheet';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Inicio' },
@@ -17,6 +18,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const { user, users, login, isLoading } = useAuth();
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -33,10 +35,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const logoStyle: React.CSSProperties | undefined = dark
     ? undefined
     : {
-        // Tinte aproximado a azul Club Malvín (#004b93) para el escudo blanco en modo claro.
         filter:
           'brightness(0) saturate(100%) invert(16%) sepia(91%) saturate(2057%) hue-rotate(191deg) brightness(92%) contrast(102%)',
       };
+
+  if (isLoading) {
+    return <div className="h-screen w-full flex items-center justify-center text-sm text-muted-foreground">Cargando sesión...</div>;
+  }
+
+  if (!user) {
+    return <div className="h-screen w-full flex items-center justify-center text-sm text-muted-foreground">Inicia sesión</div>;
+  }
 
   return (
     <div className="flex flex-col h-screen-dvh bg-background overflow-hidden">
@@ -55,10 +64,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-right">
-              <p className="text-xs font-normal leading-tight">{currentUser.name}</p>
-              <p className="text-[10px] text-muted-foreground capitalize">{currentUser.role}</p>
-            </div>
+            <Select value={user.id} onValueChange={(val) => login(val)}>
+              <SelectTrigger className="h-8 text-xs border-none bg-secondary/50 rounded-lg max-w-[140px]">
+                <SelectValue placeholder="Cambiar usuario" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map(u => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name} <span className="text-[10px] text-muted-foreground ml-1">({u.role})</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <ProfileSheet />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -15,17 +15,38 @@ const api = express();
 api.use(express.json());
 
 // Users
-api.get('/users', async (req, res) => {
+api.get('/users', async (req: Request, res: Response) => {
   try {
-    const users = await prisma.user.findMany();
+    const users = await prisma.user.findMany({
+      orderBy: { name: 'asc' }
+    });
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
+api.post('/users', async (req: Request, res: Response) => {
+  try {
+    const { name, email, role, phone, status } = req.body;
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        role: role || 'FIELD_WORKER',
+        phone: phone || null,
+        status: status || 'OFF_DUTY',
+      },
+    });
+    res.status(201).json(newUser);
+  } catch (error) {
+    console.error("Create user error:", error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
 // Areas and SubAreas
-api.get('/areas', async (req, res) => {
+api.get('/areas', async (req: Request, res: Response) => {
   try {
     const areas = await prisma.area.findMany({
       include: { subAreas: true, responsible: true },
@@ -36,7 +57,7 @@ api.get('/areas', async (req, res) => {
   }
 });
 
-api.post('/areas', async (req, res) => {
+api.post('/areas', async (req: Request, res: Response) => {
   try {
     const { name, image, responsibleId } = req.body;
     const newArea = await prisma.area.create({
@@ -54,7 +75,7 @@ api.post('/areas', async (req, res) => {
   }
 });
 
-api.post('/areas/:id/subareas', async (req, res) => {
+api.post('/areas/:id/subareas', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name } = req.body;
@@ -72,7 +93,7 @@ api.post('/areas/:id/subareas', async (req, res) => {
 });
 
 // Tickets
-api.get('/tickets', async (req, res) => {
+api.get('/tickets', async (req: Request, res: Response) => {
   try {
     const tickets = await prisma.ticket.findMany({
       include: {
@@ -84,7 +105,7 @@ api.get('/tickets', async (req, res) => {
     });
     
     // Map status from Prisma to frontend expected format if needed
-    const formattedTickets = tickets.map(ticket => ({
+    const formattedTickets = tickets.map((ticket: any) => ({
       ...ticket,
       status: ticket.status === 'PENDING' ? 'pendiente' : 
               ticket.status === 'IN_PROGRESS' ? 'en_proceso' : 'resuelto',
@@ -101,7 +122,7 @@ api.get('/tickets', async (req, res) => {
   }
 });
 
-api.post('/tickets', async (req, res) => {
+api.post('/tickets', async (req: Request, res: Response) => {
   try {
     const { title, description, areaId, subAreaId, priority, assigneeId } = req.body;
     
@@ -143,7 +164,7 @@ api.post('/tickets', async (req, res) => {
 });
 
 // Update ticket status
-api.put('/tickets/:id/status', async (req, res) => {
+api.put('/tickets/:id/status', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status, note } = req.body; // status is from frontend ('pendiente', 'en_proceso', 'resuelto')
