@@ -36,6 +36,41 @@ api.get('/areas', async (req, res) => {
   }
 });
 
+api.post('/areas', async (req, res) => {
+  try {
+    const { name, image, responsibleId } = req.body;
+    const newArea = await prisma.area.create({
+      data: {
+        name,
+        image: image || null,
+        responsibleId: responsibleId || null,
+      },
+      include: { subAreas: true, responsible: true },
+    });
+    res.status(201).json(newArea);
+  } catch (error) {
+    console.error("Create area error:", error);
+    res.status(500).json({ error: 'Failed to create area' });
+  }
+});
+
+api.post('/areas/:id/subareas', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const newSubArea = await prisma.subArea.create({
+      data: {
+        name,
+        areaId: id,
+      },
+    });
+    res.status(201).json(newSubArea);
+  } catch (error) {
+    console.error("Create subarea error:", error);
+    res.status(500).json({ error: 'Failed to create subarea' });
+  }
+});
+
 // Tickets
 api.get('/tickets', async (req, res) => {
   try {
