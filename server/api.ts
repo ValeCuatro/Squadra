@@ -189,6 +189,92 @@ api.put('/tickets/:id/status', async (req: Request, res: Response) => {
   }
 });
 
+// --- INVENTORY ---
+api.get('/inventory', async (req, res) => {
+  try {
+    const inventory = await prisma.inventoryItem.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(inventory);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+api.post('/inventory/items', async (req, res) => {
+  try {
+    const { name, category, currentStock, minStock, unit } = req.body;
+    const newItem = await prisma.inventoryItem.create({
+      data: {
+        name,
+        category,
+        currentStock: Number(currentStock),
+        minStock: Number(minStock),
+        unit
+      }
+    });
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error("Create inventory item error:", error);
+    res.status(500).json({ error: 'Failed to create inventory item' });
+  }
+});
+
+api.get('/inventory/transactions', async (req, res) => {
+  try {
+    const transactions = await prisma.inventoryTransaction.findMany({
+      include: {
+        item: true,
+        user: true,
+        ticket: true
+      },
+      orderBy: { date: 'desc' }
+    });
+    res.json(transactions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch inventory transactions' });
+  }
+});
+
+api.post('/inventory/transactions', async (req, res) => {
+  try {
+    const { itemId, userId, type, quantity, ticketId } = req.body;
+
+    // Validate type
+    if (type !== 'IN' && type !== 'OUT') {
+      return res.status(400).json({ error: 'Invalid transaction type' });
+    }
+
+    const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+
+    // En caso de ser OUT, verificar stock? Dejamos que descuente igual.
+    const newStock = type === 'IN' ? item.currentStock + quantity : item.currentStock - quantity;
+
+    // Perform transaction and update item in a Prisma transaction
+    const [transaction, updatedItem] = await prisma.$transaction([
+      prisma.inventoryTransaction.create({
+        data: {
+          itemId,
+          userId,
+          type,
+          quantity,
+          ticketId: ticketId || null
+        }
+      }),
+      prisma.inventoryItem.update({
+        where: { id: itemId },
+        data: { currentStock: newStock }
+      })
+    ]);
+
+    res.status(201).json({ transaction, updatedItem });
+  } catch (error) {
+    console.error("Inventory transaction error:", error);
+    res.status(500).json({ error: 'Failed to create inventory transaction' });
+  }
+});
+
 const PORT = 3001;
 api.listen(PORT, () => {
   console.log(`Backend API corriendo en el puerto ${PORT}`);

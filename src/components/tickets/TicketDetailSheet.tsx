@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import type { Ticket } from '@/data/mock';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { currentUser } from '@/data/mock';
 import { priorityColors, statusConfig, ticketStatusOptions } from './ticket-config';
 
 interface TicketDetailSheetProps {
@@ -16,8 +19,13 @@ interface TicketDetailSheetProps {
 }
 
 const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailSheetProps) => {
+  const queryClient = useQueryClient();
   const [nextStatus, setNextStatus] = useState<Ticket['status']>('pendiente');
   const [note, setNote] = useState('');
+  
+  // Inventory usage state
+  const [selectedItem, setSelectedItem] = useState<string>('');
+  const [quantity, setQuantity] = useState<string>('');
 
   useEffect(() => {
     if (!ticket) return;
@@ -29,6 +37,35 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
     if (!ticket) return;
     onSave(ticket.id, nextStatus, note);
     setNote('');
+  };
+
+  const { data: inventoryItems = [] } = useQuery<any[]>({
+    queryKey: ['inventory'],
+    queryFn: () => fetch('/api/inventory').then(r => r.json())
+  });
+
+  const transactionMutation = useMutation({
+    mutationFn: (data: any) => fetch('/api/inventory/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      setSelectedItem('');
+      setQuantity('');
+    }
+  });
+
+  const handleRegisterConsumption = () => {
+    if (!ticket || !selectedItem || !quantity || isNaN(Number(quantity))) return;
+    transactionMutation.mutate({
+      itemId: selectedItem,
+      userId: currentUser.id,
+      ticketId: ticket.id,
+      type: 'OUT',
+      quantity: Number(quantity)
+    });
   };
 
   return (
@@ -108,6 +145,46 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
               >
                 Guardar actualización
               </Button>
+            </div>
+
+            {/* Material Consumption Section */}
+            <div className="space-y-4 rounded-3xl bg-card p-4 shadow-sm">
+              <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Consumo de Materiales</h3>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">Producto</Label>
+                  <Select value={selectedItem} onValueChange={setSelectedItem}>
+                    <SelectTrigger className="rounded-xl text-sm">
+                      <SelectValue placeholder="Seleccionar material usado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {inventoryItems.map((i: any) => (
+                        <SelectItem key={i.id} value={i.id}>
+                          {i.name} (Stock: {i.currentStock} {i.unit})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">Cantidad</Label>
+                  <Input 
+                    type="number" 
+                    value={quantity} 
+                    onChange={e => setQuantity(e.target.value)} 
+                    placeholder="0" 
+                    className="text-sm rounded-xl" 
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl text-sm font-normal"
+                  onClick={handleRegisterConsumption}
+                  disabled={transactionMutation.isPending || !selectedItem || !quantity}
+                >
+                  {transactionMutation.isPending ? 'Registrando...' : 'Registrar Consumo'}
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-3">

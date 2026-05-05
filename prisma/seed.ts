@@ -88,7 +88,22 @@ async function main() {
   });
 
   console.log('✅ Áreas y Sub-áreas creadas con éxito');
-  console.log('Seed completado.');
+
+  // 4. Inventario
+  const inventoryItem = await prisma.inventoryItem.findFirst();
+  if (!inventoryItem) {
+    await prisma.inventoryItem.createMany({
+      data: [
+        { name: 'Cera 5L', category: 'Limpieza', currentStock: 10, minStock: 2, unit: 'L' },
+        { name: 'Cloro', category: 'Piscinas', currentStock: 50, minStock: 10, unit: 'kg' },
+        { name: 'Tornillos 2"', category: 'Mantenimiento', currentStock: 200, minStock: 50, unit: 'u' },
+        { name: 'Lamparita LED 12W', category: 'Eléctrico', currentStock: 15, minStock: 5, unit: 'u' },
+      ]
+    });
+    console.log('✅ Inventario base creado');
+  }
+
+  console.log('🚀 Seeding finalizado con éxito.');
 }
 
 main()

@@ -78,6 +78,7 @@ model Ticket {
   area        Area     @relation(fields: [areaId], references: [id])
   subArea     SubArea? @relation(fields: [subAreaId], references: [id])
   assignee    User?    @relation(fields: [assigneeId], references: [id])
+  inventoryTransactions InventoryTransaction[]
 }
 
 enum TicketStatus {
@@ -110,12 +111,14 @@ model InventoryTransaction {
   id        String   @id @default(uuid())
   itemId    String
   userId    String
+  ticketId  String?
   type      TransactionType
   quantity  Float
   date      DateTime @default(now())
 
   item      InventoryItem @relation(fields: [itemId], references: [id])
   user      User          @relation(fields: [userId], references: [id])
+  ticket    Ticket?       @relation(fields: [ticketId], references: [id])
 }
 
 enum TransactionType {
