@@ -100,6 +100,7 @@ api.get('/tickets', async (req: Request, res: Response) => {
         area: true,
         subArea: true,
         assignee: true,
+        equipments: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -124,27 +125,39 @@ api.get('/tickets', async (req: Request, res: Response) => {
 
 api.post('/tickets', async (req: Request, res: Response) => {
   try {
-    const { title, description, areaId, subAreaId, priority, assigneeId } = req.body;
+    const { title, description, areaId, subAreaId, priority, assigneeId, equipmentIds } = req.body;
     
     const dbPriority = priority === 'baja' ? 'LOW' :
                        priority === 'media' ? 'MEDIUM' :
                        priority === 'alta' ? 'HIGH' : 'URGENT';
                        
-    const ticket = await prisma.ticket.create({
-      data: {
-        title,
-        description,
-        priority: dbPriority,
-        areaId,
-        subAreaId: subAreaId || null,
-        assigneeId: assigneeId || null,
-        status: 'PENDING'
-      },
-      include: {
-        area: true,
-        subArea: true,
-        assignee: true,
+    const ticket = await prisma.$transaction(async (tx) => {
+      const createdTicket = await tx.ticket.create({
+        data: {
+          title,
+          description,
+          priority: dbPriority,
+          areaId,
+          subAreaId: subAreaId || null,
+          assigneeId: assigneeId || null,
+          status: 'PENDING'
+        },
+        include: {
+          area: true,
+          subArea: true,
+          assignee: true,
+          equipments: true,
+        }
+      });
+
+      if (equipmentIds && equipmentIds.length > 0) {
+        await tx.equipment.updateMany({
+          where: { id: { in: equipmentIds } },
+          data: { status: 'RESERVED', ticketId: createdTicket.id }
+        });
       }
+
+      return createdTicket;
     });
     
     // Formatear para que el front lo entienda si se devuelve en la respuesta
@@ -179,6 +192,7 @@ api.put('/tickets/:id/status', async (req: Request, res: Response) => {
         area: true,
         subArea: true,
         assignee: true,
+        equipments: true,
       }
     });
     
@@ -272,6 +286,70 @@ api.post('/inventory/transactions', async (req, res) => {
   } catch (error) {
     console.error("Inventory transaction error:", error);
     res.status(500).json({ error: 'Failed to create inventory transaction' });
+  }
+});
+
+// --- EQUIPMENT ---
+api.get('/equipment', async (req, res) => {
+  try {
+    const equipment = await prisma.equipment.findMany({
+      include: {
+        assignee: true,
+        ticket: true,
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json(equipment);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch equipment' });
+  }
+});
+
+api.post('/equipment', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const newEquipment = await prisma.equipment.create({
+      data: { name },
+    });
+    res.status(201).json(newEquipment);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create equipment' });
+  }
+});
+
+api.put('/equipment/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, assigneeId, ticketId, action } = req.body;
+
+    const equipment = await prisma.$transaction(async (tx) => {
+      const updated = await tx.equipment.update({
+        where: { id },
+        data: {
+          status,
+          assigneeId: assigneeId || null,
+          ticketId: ticketId || null,
+        },
+      });
+
+      if (action && assigneeId) {
+        await tx.equipmentLog.create({
+          data: {
+            equipmentId: id,
+            userId: assigneeId,
+            ticketId: ticketId || null,
+            action: action,
+          }
+        });
+      }
+
+      return updated;
+    });
+
+    res.json(equipment);
+  } catch (error) {
+    console.error("Update equipment error:", error);
+    res.status(500).json({ error: 'Failed to update equipment' });
   }
 });
 

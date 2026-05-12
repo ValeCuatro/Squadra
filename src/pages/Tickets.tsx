@@ -35,6 +35,11 @@ const Tickets = () => {
     queryFn: () => fetch('/api/users').then(r => r.json())
   });
 
+  const { data: equipmentList = [] } = useQuery<any[]>({
+    queryKey: ['equipment'],
+    queryFn: () => fetch('/api/equipment').then(r => r.json())
+  });
+
   const [filterUser, setFilterUser] = useState<string>(currentUser.id);
   const [activeStatus, setActiveStatus] = useState<Ticket['status']>('pendiente');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -46,6 +51,7 @@ const Tickets = () => {
   const [selectedSubArea, setSelectedSubArea] = useState('');
   const [newPriority, setNewPriority] = useState('media');
   const [newAssignee, setNewAssignee] = useState('');
+  const [selectedEquipments, setSelectedEquipments] = useState<string[]>([]);
 
   const subAreas = areas.find((a: any) => a.id === selectedArea)?.subAreas || [];
   
@@ -90,6 +96,7 @@ const Tickets = () => {
       setSelectedSubArea('');
       setNewPriority('media');
       setNewAssignee('');
+      setSelectedEquipments([]);
     }
   });
 
@@ -112,7 +119,8 @@ const Tickets = () => {
       areaId: selectedArea,
       subAreaId: selectedSubArea || undefined,
       priority: newPriority,
-      assigneeId: newAssignee || undefined
+      assigneeId: newAssignee || undefined,
+      equipmentIds: selectedEquipments
     });
   };
 
@@ -186,6 +194,27 @@ const Tickets = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-normal">Herramientas (Opcional)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {equipmentList.filter((e: any) => e.status === 'AVAILABLE').map((eq: any) => (
+                    <button
+                      key={eq.id}
+                      onClick={() => setSelectedEquipments(prev => prev.includes(eq.id) ? prev.filter(id => id !== eq.id) : [...prev, eq.id])}
+                      className={`text-[10px] px-3 py-1.5 rounded-full transition-colors border ${
+                        selectedEquipments.includes(eq.id) 
+                          ? 'bg-primary text-primary-foreground border-primary' 
+                          : 'bg-card text-muted-foreground border-border'
+                      }`}
+                    >
+                      {eq.name}
+                    </button>
+                  ))}
+                  {equipmentList.filter((e: any) => e.status === 'AVAILABLE').length === 0 && (
+                     <span className="text-[10px] text-muted-foreground italic mt-1">No hay herramientas disponibles</span>
+                  )}
                 </div>
               </div>
               <Button 

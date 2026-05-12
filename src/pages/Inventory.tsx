@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Plus, Package, Minus } from 'lucide-react';
+import { AlertTriangle, Plus, Package, Minus, Wrench } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -14,6 +14,11 @@ const Inventory = () => {
   const { data: items = [] } = useQuery<any[]>({
     queryKey: ['inventory'],
     queryFn: () => fetch('/api/inventory').then(r => r.json())
+  });
+
+  const { data: equipments = [] } = useQuery<any[]>({
+    queryKey: ['equipment'],
+    queryFn: () => fetch('/api/equipment').then(r => r.json())
   });
 
   const { data: transactions = [] } = useQuery<any[]>({
@@ -31,6 +36,9 @@ const Inventory = () => {
   
   const [newItemOpen, setNewItemOpen] = useState(false);
   const [newItemData, setNewItemData] = useState({ name: '', category: '', minStock: '0', unit: 'u' });
+
+  const [newEquipOpen, setNewEquipOpen] = useState(false);
+  const [newEquipName, setNewEquipName] = useState('');
 
   const filtered = filterCat === 'all' ? items : items.filter((i: any) => i.category === filterCat);
   const lowStockCount = items.filter((i: any) => i.currentStock <= i.minStock).length;
@@ -63,6 +71,19 @@ const Inventory = () => {
     }
   });
 
+  const createEquipmentMutation = useMutation({
+    mutationFn: (data: any) => fetch('/api/equipment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      setNewEquipOpen(false);
+      setNewEquipName('');
+    }
+  });
+
   const handleTransaction = () => {
     if (!selectedItem || !quantity || isNaN(Number(quantity))) return;
     transactionMutation.mutate({
@@ -79,6 +100,11 @@ const Inventory = () => {
       ...newItemData,
       currentStock: 0
     });
+  };
+
+  const handleCreateEquipment = () => {
+    if (!newEquipName) return;
+    createEquipmentMutation.mutate({ name: newEquipName });
   };
 
   return (
@@ -179,12 +205,38 @@ const Inventory = () => {
               </div>
             </SheetContent>
           </Sheet>
+          <Sheet open={newEquipOpen} onOpenChange={setNewEquipOpen}>
+            <SheetTrigger asChild>
+              <Button size="sm" variant="outline" className="rounded-xl text-xs font-normal gap-1.5 h-8">
+                <Plus size={14} /> Nueva Hta.
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-2xl">
+              <SheetHeader>
+                <SheetTitle className="text-sm font-medium">Nueva Herramienta</SheetTitle>
+              </SheetHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">Nombre del equipo</Label>
+                  <Input value={newEquipName} onChange={e => setNewEquipName(e.target.value)} placeholder="Ej: Taladro percutor" className="text-sm rounded-xl" />
+                </div>
+                <Button 
+                  className="w-full rounded-xl text-sm font-normal" 
+                  onClick={handleCreateEquipment}
+                  disabled={createEquipmentMutation.isPending}
+                >
+                  Agregar Herramienta
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
       <Tabs defaultValue="stock" className="w-full">
         <TabsList className="w-full bg-card rounded-xl h-9">
           <TabsTrigger value="stock" className="flex-1 text-xs font-normal rounded-lg data-[state=active]:shadow-sm">Stock Actual</TabsTrigger>
+          <TabsTrigger value="equipment" className="flex-1 text-xs font-normal rounded-lg data-[state=active]:shadow-sm">Herramientas</TabsTrigger>
           <TabsTrigger value="history" className="flex-1 text-xs font-normal rounded-lg data-[state=active]:shadow-sm">Historial</TabsTrigger>
         </TabsList>
         
@@ -242,6 +294,36 @@ const Inventory = () => {
           );
         })}
       </div>
+      </TabsContent>
+      
+      <TabsContent value="equipment" className="mt-4 space-y-2">
+        {equipments.length === 0 ? (
+          <div className="text-center py-8 text-xs text-muted-foreground">No hay herramientas registradas</div>
+        ) : (
+          equipments.map((eq: any) => (
+            <div key={eq.id} className="bg-card rounded-xl p-3.5 shadow-sm flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/5">
+                <Wrench size={16} className="text-primary" strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-normal truncate">{eq.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {eq.status === 'AVAILABLE' ? 'Disponible' :
+                   eq.status === 'IN_USE' ? `En uso por ${eq.assignee?.name || 'alguien'}` :
+                   eq.status === 'RESERVED' ? 'Reservado' : 'Mantenimiento'}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <span className={`text-[10px] px-2 py-1 rounded-full ${
+                  eq.status === 'AVAILABLE' ? 'bg-emerald-500/10 text-emerald-500' : 
+                  'bg-destructive/10 text-destructive'
+                }`}>
+                  {eq.status === 'AVAILABLE' ? 'Libre' : 'Ocupado'}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
       </TabsContent>
       
       <TabsContent value="history" className="mt-4 space-y-2">

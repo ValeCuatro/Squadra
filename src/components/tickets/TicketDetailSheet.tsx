@@ -27,6 +27,9 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
 
+  // Equipment usage state
+  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+
   useEffect(() => {
     if (!ticket) return;
     setNextStatus(ticket.status);
@@ -57,6 +60,24 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
     }
   });
 
+  const { data: equipmentList = [] } = useQuery<any[]>({
+    queryKey: ['equipment'],
+    queryFn: () => fetch('/api/equipment').then(r => r.json())
+  });
+
+  const updateEquipmentMutation = useMutation({
+    mutationFn: (data: any) => fetch(`/api/equipment/${data.id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(res => res.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      setSelectedEquipment('');
+    }
+  });
+
   const handleRegisterConsumption = () => {
     if (!ticket || !selectedItem || !quantity || isNaN(Number(quantity))) return;
     transactionMutation.mutate({
@@ -65,6 +86,27 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
       ticketId: ticket.id,
       type: 'OUT',
       quantity: Number(quantity)
+    });
+  };
+
+  const handleTakeEquipment = () => {
+    if (!ticket || !selectedEquipment) return;
+    updateEquipmentMutation.mutate({
+      id: selectedEquipment,
+      status: 'IN_USE',
+      ticketId: ticket.id,
+      assigneeId: currentUser.id,
+      action: 'CHECK_OUT'
+    });
+  };
+
+  const handleReturnEquipment = (equipmentId: string) => {
+    updateEquipmentMutation.mutate({
+      id: equipmentId,
+      status: 'AVAILABLE',
+      ticketId: null,
+      assigneeId: null,
+      action: 'RETURN'
     });
   };
 
@@ -183,6 +225,57 @@ const TicketDetailSheet = ({ ticket, open, onOpenChange, onSave }: TicketDetailS
                   disabled={transactionMutation.isPending || !selectedItem || !quantity}
                 >
                   {transactionMutation.isPending ? 'Registrando...' : 'Registrar Consumo'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Uso de Herramientas Section */}
+            <div className="space-y-4 rounded-3xl bg-card p-4 shadow-sm">
+              <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Uso de Herramientas</h3>
+              
+              {equipmentList.filter((eq: any) => eq.ticketId === ticket.id).length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <p className="text-[10px] text-muted-foreground uppercase">Herramientas en uso</p>
+                  {equipmentList.filter((eq: any) => eq.ticketId === ticket.id).map((eq: any) => (
+                    <div key={eq.id} className="flex items-center justify-between bg-background p-2 rounded-xl">
+                      <span className="text-xs font-medium">{eq.name}</span>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-[10px] h-6 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleReturnEquipment(eq.id)}
+                        disabled={updateEquipmentMutation.isPending}
+                      >
+                        Devolver
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-3 mt-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-normal">Tomar herramienta</Label>
+                  <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
+                    <SelectTrigger className="rounded-xl text-sm">
+                      <SelectValue placeholder="Seleccionar herramienta libre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {equipmentList.filter((eq: any) => eq.status === 'AVAILABLE' || (eq.status === 'RESERVED' && eq.ticketId === ticket.id)).map((eq: any) => (
+                        <SelectItem key={eq.id} value={eq.id}>
+                          {eq.name} {eq.status === 'RESERVED' ? '(Reservado)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl text-sm font-normal"
+                  onClick={handleTakeEquipment}
+                  disabled={updateEquipmentMutation.isPending || !selectedEquipment}
+                >
+                  {updateEquipmentMutation.isPending ? 'Procesando...' : 'Tomar para este ticket'}
                 </Button>
               </div>
             </div>

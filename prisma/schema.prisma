@@ -79,6 +79,8 @@ model Ticket {
   subArea     SubArea? @relation(fields: [subAreaId], references: [id])
   assignee    User?    @relation(fields: [assigneeId], references: [id])
   inventoryTransactions InventoryTransaction[]
+  equipments          Equipment[]
+  equipmentLogs       EquipmentLog[]
 }
 
 enum TicketStatus {
@@ -132,9 +134,11 @@ model Equipment {
   name        String
   status      EquipmentStatus @default(AVAILABLE)
   assigneeId  String?
+  ticketId    String?
   createdAt   DateTime @default(now())
 
   assignee    User?    @relation(fields: [assigneeId], references: [id])
+  ticket      Ticket?  @relation(fields: [ticketId], references: [id])
   logs        EquipmentLog[]
 }
 
@@ -149,11 +153,13 @@ model EquipmentLog {
   id          String   @id @default(uuid())
   equipmentId String
   userId      String
+  ticketId    String?
   action      EquipmentAction
   date        DateTime @default(now())
 
   equipment   Equipment @relation(fields: [equipmentId], references: [id])
   user        User      @relation(fields: [userId], references: [id])
+  ticket      Ticket?   @relation(fields: [ticketId], references: [id])
 }
 
 enum EquipmentAction {

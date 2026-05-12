@@ -38,10 +38,16 @@ async function main() {
   console.log('✅ Usuarios de prueba creados');
 
   // 2. Limpiar áreas viejas (opcional pero bueno para el seed repetitivo)
-  await prisma.subArea.deleteMany({});
-  await prisma.area.deleteMany({});
+  try {
+    await prisma.subArea.deleteMany({});
+    await prisma.area.deleteMany({});
+  } catch (error) {
+    console.log('⚠️ No se pudieron limpiar las áreas por dependencias. Omitiendo limpieza...');
+  }
 
   // 3. Crear Áreas y Subáreas de prueba (Club Malvín mock)
+  const existingArea = await prisma.area.findFirst();
+  if (!existingArea) {
   const piso1 = await prisma.area.create({
     data: {
       name: 'Piso 1',
@@ -87,7 +93,8 @@ async function main() {
     }
   });
 
-  console.log('✅ Áreas y Sub-áreas creadas con éxito');
+    console.log('✅ Áreas y Sub-áreas creadas con éxito');
+  }
 
   // 4. Inventario
   const inventoryItem = await prisma.inventoryItem.findFirst();
@@ -101,6 +108,21 @@ async function main() {
       ]
     });
     console.log('✅ Inventario base creado');
+  }
+
+  // 5. Equipamiento
+  const equipment = await prisma.equipment.findFirst();
+  if (!equipment) {
+    await prisma.equipment.createMany({
+      data: [
+        { name: 'Taladro Percutor Bosch', status: 'AVAILABLE' },
+        { name: 'Soldadora Inverter', status: 'AVAILABLE' },
+        { name: 'Escalera de Aluminio 5m', status: 'AVAILABLE' },
+        { name: 'Cortadora de Césped', status: 'AVAILABLE' },
+        { name: 'Hidrolavadora Karcher', status: 'AVAILABLE' }
+      ]
+    });
+    console.log('✅ Equipamiento base creado');
   }
 
   console.log('🚀 Seeding finalizado con éxito.');
