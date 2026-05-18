@@ -125,6 +125,95 @@ async function main() {
     console.log('✅ Equipamiento base creado');
   }
 
+  // 6. Tickets y Transacciones para Dashboard
+  const ticketCount = await prisma.ticket.count();
+  if (ticketCount === 0 && existingArea) {
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 5);
+
+    await prisma.ticket.create({
+      data: {
+        title: 'Reparar luminaria del vestuario',
+        description: 'Parpadea la luz principal.',
+        priority: 'MEDIUM',
+        status: 'RESOLVED',
+        areaId: existingArea.id,
+        assigneeId: operario.id,
+        createdAt: pastDate,
+        updatedAt: new Date(pastDate.getTime() + 1000 * 60 * 60 * 4), // Resuelto en 4 horas
+      }
+    });
+
+    const pastDate2 = new Date();
+    pastDate2.setDate(pastDate2.getDate() - 2);
+
+    const ticket2 = await prisma.ticket.create({
+      data: {
+        title: 'Fuga de agua en lavamanos',
+        description: 'Pierde agua por debajo.',
+        priority: 'HIGH',
+        status: 'IN_PROGRESS',
+        areaId: existingArea.id,
+        assigneeId: operario.id,
+        createdAt: pastDate2,
+      }
+    });
+
+    const todayDate = new Date();
+
+    await prisma.ticket.create({
+      data: {
+        title: 'Limpieza profunda sector pesas',
+        description: 'Requiere limpieza mensual',
+        priority: 'LOW',
+        status: 'PENDING',
+        areaId: existingArea.id,
+        createdAt: todayDate,
+      }
+    });
+
+    // Añadir transacciones de inventario
+    const cera = await prisma.inventoryItem.findFirst({ where: { name: 'Cera 5L' } });
+    const tornillos = await prisma.inventoryItem.findFirst({ where: { name: 'Tornillos 2"' } });
+
+    if (cera && tornillos) {
+      // Consumos pasados
+      for (let i = 1; i <= 5; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        
+        await prisma.inventoryTransaction.create({
+          data: {
+            itemId: tornillos.id,
+            userId: operario.id,
+            ticketId: ticket2.id,
+            type: 'OUT',
+            quantity: Math.floor(Math.random() * 20) + 5, // 5 a 25 tornillos diarios
+            date: d
+          }
+        });
+
+        await prisma.inventoryTransaction.create({
+          data: {
+            itemId: cera.id,
+            userId: operario.id,
+            type: 'OUT',
+            quantity: 1, // 1 litro
+            date: d
+          }
+        });
+      }
+      
+      // Stock bajo a propósito
+      await prisma.inventoryItem.update({
+        where: { id: cera.id },
+        data: { currentStock: 1 } // Por debajo del minStock (2)
+      });
+    }
+
+    console.log('✅ Tickets y Transacciones de prueba creadas para el Dashboard');
+  }
+
   console.log('🚀 Seeding finalizado con éxito.');
 }
 

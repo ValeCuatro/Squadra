@@ -353,6 +353,102 @@ api.put('/equipment/:id/status', async (req, res) => {
   }
 });
 
+// --- DASHBOARD STATS ---
+api.get('/dashboard/stats', async (req, res) => {
+  try {
+    const now = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    // 1. Tickets KPIs
+    const allTickets = await prisma.ticket.findMany();
+    const total = allTickets.length;
+    const pending = allTickets.filter(t => t.status === 'PENDING').length;
+    const inProgress = allTickets.filter(t => t.status === 'IN_PROGRESS').length;
+    const resolved = allTickets.filter(t => t.status === 'RESOLVED').length;
+    const completionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+    // MTTR: Mean Time To Repair
+    let mttrHours = 0;
+    const resolvedTickets = allTickets.filter(t => t.status === 'RESOLVED' && t.updatedAt > t.createdAt);
+    if (resolvedTickets.length > 0) {
+      const totalRepairTime = resolvedTickets.reduce((acc, t) => {
+        return acc + (t.updatedAt.getTime() - t.createdAt.getTime());
+      }, 0);
+      mttrHours = Math.round((totalRepairTime / resolvedTickets.length) / (1000 * 60 * 60)); // in hours
+    }
+
+    // 2. Inventory Alerts (Stock <= minStock) and "Burn Rate" estimation
+    const inventory = await prisma.inventoryItem.findMany();
+    const lowStockItems = inventory.filter(i => i.currentStock <= i.minStock);
+    
+    // Get recent transactions to calculate velocity
+    const recentOutTransactions = await prisma.inventoryTransaction.findMany({
+      where: {
+        type: 'OUT',
+        date: { gte: thirtyDaysAgo }
+      }
+    });
+
+    const inventoryAlerts = lowStockItems.map(item => {
+      const itemTx = recentOutTransactions.filter(tx => tx.itemId === item.id);
+      const totalConsumed30d = itemTx.reduce((acc, tx) => acc + tx.quantity, 0);
+      const dailyVelocity = totalConsumed30d / 30;
+      
+      let estimatedDaysRemaining = null;
+      if (dailyVelocity > 0) {
+        estimatedDaysRemaining = Math.floor(item.currentStock / dailyVelocity);
+      }
+
+      return {
+        id: item.id,
+        name: item.name,
+        currentStock: item.currentStock,
+        minStock: item.minStock,
+        unit: item.unit,
+        dailyVelocity: Number(dailyVelocity.toFixed(2)),
+        estimatedDaysRemaining
+      };
+    });
+
+    // 3. Consumption Trend for Charts (group by day)
+    const consumptionMap = new Map();
+    recentOutTransactions.forEach(tx => {
+      const dateStr = tx.date.toISOString().split('T')[0];
+      if (!consumptionMap.has(dateStr)) {
+        consumptionMap.set(dateStr, { date: dateStr, quantity: 0 });
+      }
+      consumptionMap.get(dateStr).quantity += tx.quantity;
+    });
+    
+    const consumptionTrend = Array.from(consumptionMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+    // 4. Tasks status distribution for Pie Chart
+    const taskStatusDistribution = [
+      { name: 'Pendientes', value: pending },
+      { name: 'En Proceso', value: inProgress },
+      { name: 'Resueltas', value: resolved },
+    ];
+
+    res.json({
+      kpis: {
+        total,
+        pending,
+        inProgress,
+        resolved,
+        completionRate,
+        mttrHours
+      },
+      inventoryAlerts,
+      consumptionTrend,
+      taskStatusDistribution
+    });
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
+  }
+});
+
 const PORT = 3001;
 api.listen(PORT, () => {
   console.log(`Backend API corriendo en el puerto ${PORT}`);
