@@ -99,16 +99,6 @@ const ProfileSheet = () => {
           <p className="text-sm font-normal">{user.name}</p>
           <p className="text-[10px] text-muted-foreground capitalize">{user.role}</p>
 
-          <Button 
-            variant={profile?.status === 'ON_DUTY' ? 'destructive' : 'default'}
-            size="sm" 
-            className="mt-4 w-full h-9 rounded-xl text-xs font-medium"
-            onClick={() => toggleStatus.mutate(profile?.status === 'ON_DUTY' ? 'OFF_DUTY' : 'ON_DUTY')}
-            disabled={toggleStatus.isPending || isLoading}
-          >
-            <Clock size={14} className="mr-2" />
-            {profile?.status === 'ON_DUTY' ? 'Finalizar Turno (Clock Out)' : 'Iniciar Turno (Clock In)'}
-          </Button>
         </div>
 
         <Separator />
