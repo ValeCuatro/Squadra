@@ -1,17 +1,16 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Ticket, MapPin, Package, Droplets } from 'lucide-react';
+import { LayoutDashboard, Ticket, MapPin, Package, Droplets, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProfileSheet from './ProfileSheet';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const navItems = [
+const baseNavItems = [
   { path: '/', icon: LayoutDashboard, label: 'Inicio' },
   { path: '/tickets', icon: Ticket, label: 'Tickets' },
   { path: '/areas', icon: MapPin, label: 'Áreas' },
   { path: '/inventario', icon: Package, label: 'Inventario' },
-  { path: '/piscinas', icon: Droplets, label: 'Piscinas' },
 ];
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -28,7 +27,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     return () => observer.disconnect();
   }, []);
 
-  const currentNav = navItems.find(n => n.path === location.pathname) || navItems[0];
+  const navItems = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR' 
+    ? [...baseNavItems, { path: '/staff', icon: Users, label: 'Staff' }]
+    : [...baseNavItems, { path: '/piscinas', icon: Droplets, label: 'Piscinas' }];
+
+  const currentNav = navItems.find(n => n.path === location.pathname) || navItems[0] || baseNavItems[0];
   const logoSrc = dark
     ? 'https://clubmalvin.uy/wp-content/uploads/2016/07/logo-malvin-400.png'
     : '/escudo-malvin.png';

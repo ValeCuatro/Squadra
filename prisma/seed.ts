@@ -214,6 +214,80 @@ async function main() {
     console.log('✅ Tickets y Transacciones de prueba creadas para el Dashboard');
   }
 
+  // 7. Staff Data (Schedules, Certifications, Leaves, Swaps)
+  const scheduleCount = await prisma.schedule.count();
+  if (scheduleCount === 0) {
+    // Horarios para Operario: Lunes a Viernes de 08:00 a 16:00
+    const schedules = [1, 2, 3, 4, 5].map(day => ({
+      userId: operario.id,
+      dayOfWeek: day,
+      startTime: '08:00',
+      endTime: '16:00'
+    }));
+    await prisma.schedule.createMany({ data: schedules });
+
+    // Certificaciones
+    await prisma.certification.create({
+      data: {
+        userId: operario.id,
+        name: 'Mantenimiento Eléctrico Básico',
+        issueDate: new Date('2023-01-15'),
+        expirationDate: new Date('2026-01-15') // Vencida
+      }
+    });
+    await prisma.certification.create({
+      data: {
+        userId: operario.id,
+        name: 'Seguridad en Altura',
+        issueDate: new Date('2025-05-10'),
+        expirationDate: new Date('2028-05-10') // Vigente
+      }
+    });
+
+    // Ausencias / Licencias
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const inThreeDays = new Date();
+    inThreeDays.setDate(inThreeDays.getDate() + 3);
+
+    await prisma.leaveRequest.create({
+      data: {
+        userId: operario.id,
+        startDate: tomorrow,
+        endDate: inThreeDays,
+        reason: 'Consulta médica especialista',
+        status: 'PENDING'
+      }
+    });
+
+    // Cambio de turno (crearemos otro operario para simular)
+    const operario2 = await prisma.user.upsert({
+      where: { email: 'juan@squadra.com' },
+      update: {},
+      create: {
+        name: 'Juan Pérez',
+        email: 'juan@squadra.com',
+        role: 'FIELD_WORKER',
+        status: 'OFF_DUTY',
+      },
+    });
+
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    await prisma.shiftSwapRequest.create({
+      data: {
+        requesterId: operario.id,
+        recipientId: operario2.id,
+        dateToSwap: nextWeek,
+        reason: 'Asunto familiar',
+        status: 'PENDING'
+      }
+    });
+
+    console.log('✅ Datos de Staff de prueba creados (Horarios, Certificaciones, Licencias, Swaps)');
+  }
+
   console.log('🚀 Seeding finalizado con éxito.');
 }
 

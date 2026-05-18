@@ -449,6 +449,129 @@ api.get('/dashboard/stats', async (req, res) => {
   }
 });
 
+// --- STAFF & PROFILE MANAGEMENT ---
+api.get('/staff/profile/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        schedules: true,
+        certifications: true,
+        leaveRequests: { orderBy: { createdAt: 'desc' } },
+        shiftSwapsRequested: { include: { recipient: true }, orderBy: { createdAt: 'desc' } },
+        shiftSwapsReceived: { include: { requester: true }, orderBy: { createdAt: 'desc' } }
+      }
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
+api.post('/staff/profile/:id/clock', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'ON_DUTY' | 'OFF_DUTY'
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { status }
+    });
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+});
+
+// Leaves
+api.get('/staff/leaves', async (req, res) => {
+  try {
+    const leaves = await prisma.leaveRequest.findMany({
+      include: { user: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(leaves);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch leave requests' });
+  }
+});
+
+api.post('/staff/leaves', async (req, res) => {
+  try {
+    const { userId, startDate, endDate, reason } = req.body;
+    const newLeave = await prisma.leaveRequest.create({
+      data: {
+        userId,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        reason
+      }
+    });
+    res.status(201).json(newLeave);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create leave request' });
+  }
+});
+
+api.put('/staff/leaves/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'APPROVED' | 'REJECTED'
+    const updatedLeave = await prisma.leaveRequest.update({
+      where: { id },
+      data: { status }
+    });
+    res.json(updatedLeave);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update leave request' });
+  }
+});
+
+// Shift Swaps
+api.get('/staff/swaps', async (req, res) => {
+  try {
+    const swaps = await prisma.shiftSwapRequest.findMany({
+      include: { requester: true, recipient: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(swaps);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch shift swaps' });
+  }
+});
+
+api.post('/staff/swaps', async (req, res) => {
+  try {
+    const { requesterId, recipientId, dateToSwap, reason } = req.body;
+    const newSwap = await prisma.shiftSwapRequest.create({
+      data: {
+        requesterId,
+        recipientId,
+        dateToSwap: new Date(dateToSwap),
+        reason
+      }
+    });
+    res.status(201).json(newSwap);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create shift swap request' });
+  }
+});
+
+api.put('/staff/swaps/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'APPROVED' | 'REJECTED'
+    const updatedSwap = await prisma.shiftSwapRequest.update({
+      where: { id },
+      data: { status }
+    });
+    res.json(updatedSwap);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update shift swap request' });
+  }
+});
+
 const PORT = 3001;
 api.listen(PORT, () => {
   console.log(`Backend API corriendo en el puerto ${PORT}`);

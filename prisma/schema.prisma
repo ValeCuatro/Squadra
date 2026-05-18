@@ -28,6 +28,62 @@ model User {
   inventoryTransactions InventoryTransaction[]
   equipmentLogs        EquipmentLog[]
   measurementsDone     MeasurementRecord[]
+  schedules            Schedule[]
+  leaveRequests        LeaveRequest[]
+  shiftSwapsRequested  ShiftSwapRequest[] @relation("SwapRequester")
+  shiftSwapsReceived   ShiftSwapRequest[] @relation("SwapRecipient")
+  certifications       Certification[]
+}
+
+// --- STAFF SCHEDULING & MANAGEMENT ---
+model Schedule {
+  id        String   @id @default(uuid())
+  userId    String
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, etc.
+  startTime String   // e.g., "08:00"
+  endTime   String   // e.g., "16:00"
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LeaveRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  startDate DateTime
+  endDate   DateTime
+  reason    String
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ShiftSwapRequest {
+  id             String   @id @default(uuid())
+  requesterId    String
+  recipientId    String
+  dateToSwap     DateTime
+  reason         String?
+  status         RequestStatus @default(PENDING)
+  createdAt      DateTime @default(now())
+
+  requester      User     @relation("SwapRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  recipient      User     @relation("SwapRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Certification {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  issueDate      DateTime
+  expirationDate DateTime?
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
